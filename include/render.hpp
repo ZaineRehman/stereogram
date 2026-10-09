@@ -63,10 +63,39 @@ public:
 		SDL_RenderTexture(renderer, texture, nullptr, nullptr);
 		SDL_RenderPresent(renderer);
 	}
+
+	void resizeWindow(int newWidth, int newHeight) {
+		SDL_SetWindowSize(window, newWidth, newHeight);
+	}
+
+	bool resizeTexture(int newWidth, int newHeight) {
+		SDL_Texture* newTexture = SDL_CreateTexture(
+			renderer,
+			SDL_PIXELFORMAT_RGBA32,
+			SDL_TEXTUREACCESS_STREAMING,
+			newWidth,
+			newHeight
+		);
+
+		if (!newTexture) return false;
+
+		SDL_DestroyTexture(texture);
+		texture = newTexture;
+
+		width = newWidth;
+		height = newHeight;
+
+		return true;
+	}
+
+	bool resize(int newWidth, int newHeight) {
+		resizeWindow(newWidth, newHeight);
+		return resizeTexture(newWidth, newHeight);
+	}
 };
 
 
-std::vector<RGBA_t> loadBMP(const std::string& path, size_t& width, size_t& height) {
+inline std::vector<RGBA_t> loadBMP(const std::string& path, size_t& width, size_t& height) {
 	SDL_Surface* surface = SDL_LoadBMP(path.c_str());
 
 	if (!surface) return {};
