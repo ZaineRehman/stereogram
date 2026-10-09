@@ -2,29 +2,34 @@
 
 
 #include <iostream>
+#include <filesystem>
 
 #include "render.hpp"
 
 
+std::vector<std::string> getFilesInDir(const char* path) {
+	std::vector<std::string> files {};
+
+	for (const std::filesystem::directory_entry& f : std::filesystem::directory_iterator(path)) {
+		std::string file = f.path().string();
+		std::cout << file << std::endl;
+		// only get bmp
+		if (file.find(".bmp") != std::string::npos) files.push_back(file);
+	}
+
+	return files;
+}
+
 void TextureHandler::loadColorMaps() {
 	// read color map bmp into texture
+	std::vector<std::string> colorFiles = getFilesInDir("assets/tile");
 
-	std::vector<std::string> colorFiles {
-		"colors.bmp", 
-		"flores.bmp", 
-		"gravel.bmp", 
-		"pumpkins.bmp", 
-		"satin.bmp", 
-		"squares.bmp", 
-		"tiles.bmp", 
-		"wood.bmp"
-	};
 	for (const std::string& c : colorFiles) {
 		colorMap_widths.push_back(0);
 		colorMap_heights.push_back(0);
 
 		colorMaps.push_back(loadBMP(
-			"assets/tile/" + c, 
+			c, 
 			colorMap_widths[colorMap_index], 
 			colorMap_heights[colorMap_index]
 		));
@@ -44,20 +49,14 @@ void TextureHandler::loadColorMaps() {
 
 void TextureHandler::loadDepthMaps() {
 	// read depth map bmp into texture
+	std::vector<std::string> depthFiles = getFilesInDir("assets/depth");
 
-	std::vector<std::string> depthFiles {
-		"grave.bmp", 
-		"lebron.bmp", 
-		"mario.bmp", 
-		"rings.bmp", 
-		"eagle.bmp"
-	};
 	for (const std::string& c : depthFiles) {
 		depthMap_widths.push_back(0);
 		depthMap_heights.push_back(0);
 
 		depthMaps.push_back(loadBMP(
-			"assets/depth/" + c, 
+			c, 
 			depthMap_widths[depthMap_index], 
 			depthMap_heights[depthMap_index]
 		));
