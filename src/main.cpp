@@ -1,4 +1,5 @@
 #include <iostream>
+#include <string>
 
 #include <SDL3/SDL.h>
 
@@ -13,8 +14,8 @@
 // magick mogrify -resize 128x128! -format bmp *.*
 
 
-size_t WIDTH = 1600, HEIGHT = 1000;
-int OFFSET = 20;
+size_t WIDTH = 1200, HEIGHT = 800;
+int OFFSET = 40;
 
 
 int main() {
@@ -26,46 +27,99 @@ int main() {
 	Renderer renderer {WIDTH, HEIGHT, "Stereogram"};
 	
 	// read color map bmp into texture
-	size_t colorMap_width, colorMap_height;
-	std::vector<RGBA_t> colorMap = loadBMP("assets/tile/tiles.bmp", colorMap_width, colorMap_height);
+
+	std::vector<size_t> colorMap_widths {};
+	std::vector<size_t> colorMap_heights {};
+	std::vector<std::vector<RGBA_t>> colorMaps {};
+	size_t colorMap_index = 0;
+
+	std::vector<std::string> colorFiles {
+		"colors.bmp", 
+		"flores.bmp", 
+		"gravel.bmp", 
+		"pumpkins.bmp", 
+		"satin.bmp", 
+		"squares.bmp", 
+		"tiles.bmp", 
+		"wood.bmp"
+	};
+	for (const std::string& c : colorFiles) {
+		colorMap_widths.push_back(0);
+		colorMap_heights.push_back(0);
+
+		colorMaps.push_back(loadBMP(
+			"assets/tile/" + c, 
+			colorMap_widths[colorMap_index], 
+			colorMap_heights[colorMap_index]
+		));
+
+		colorMap_index++;
+	}
+	colorMap_index = 0;
 	
 	auto randRGB = []() {
 		return static_cast<uint8_t>(rand() % 255);
 	};
 
-	if (0) for (size_t i = 0; i < colorMap_width*colorMap_height; ++i) {
-		colorMap[i] = RGBA_t{randRGB(), randRGB(), randRGB(), 255};
-	}
+	//if (0) for (size_t i = 0; i < colorMap_width*colorMap_height; ++i) {
+	//	colorMap[i] = RGBA_t{randRGB(), randRGB(), randRGB(), 255};
+	//}
 	
 	// read depth map bmp into texture
-	size_t depthMap_width, depthMap_height;
-	std::vector<RGBA_t> depthMap = loadBMP("assets/depth/grave.bmp", depthMap_width, depthMap_height);
 
+	std::vector<size_t> depthMap_widths {};
+	std::vector<size_t> depthMap_heights {};
+	std::vector<std::vector<RGBA_t>> depthMaps {};
+	size_t depthMap_index = 0;
 
-	// fill in top and left of depth map to align center of screen
-	size_t leftPadding = (WIDTH - depthMap_width)/2;
-	if (depthMap_width > WIDTH) leftPadding = 0;
-	size_t topPadding = (HEIGHT - depthMap_height)/2;
-	if (depthMap_height > HEIGHT) topPadding = 0;
+	std::vector<std::string> depthFiles {
+		"grave.bmp", 
+		"lebron.bmp", 
+		"mario.bmp", 
+		"rings.bmp", 
+		"eagle.bmp"
+	};
+	for (const std::string& c : depthFiles) {
+		depthMap_widths.push_back(0);
+		depthMap_heights.push_back(0);
 
-	// ok now fill in
-	std::vector<RGBA_t> newvec {};
+		depthMaps.push_back(loadBMP(
+			"assets/depth/" + c, 
+			depthMap_widths[depthMap_index], 
+			depthMap_heights[depthMap_index]
+		));
 
-	for (size_t i = 0; i < topPadding; ++i) {
-		newvec.insert(newvec.begin(), depthMap_width + leftPadding, RGBA_t{0,0,0,255});
+		depthMap_index++;
 	}
+	depthMap_index = 0;
+
+
+	for (size_t v = 0; v < depthMaps.size(); ++v) {
+		// fill in top and left of depth map to align center of screen
+		size_t leftPadding = (WIDTH - depthMap_widths[v])/2;
+		if (depthMap_widths[v] > WIDTH) leftPadding = 0;
+		size_t topPadding = (HEIGHT - depthMap_heights[v])/2;
+		if (depthMap_heights[v] > HEIGHT) topPadding = 0;
 	
-	for (size_t i = 0; i < depthMap_height; ++i) {
-		for (size_t n = 0; n < leftPadding; ++n) {
-			newvec.push_back(RGBA_t{0,0,0,255});
+		// ok now fill in
+		std::vector<RGBA_t> newvec {};
+	
+		for (size_t i = 0; i < topPadding; ++i) {
+			newvec.insert(newvec.begin(), depthMap_widths[v] + leftPadding, RGBA_t{0,0,0,255});
 		}
-		auto start = depthMap.begin() + (i * depthMap_width);
-		newvec.insert(newvec.end(), start, start + depthMap_width);
+		
+		for (size_t i = 0; i < depthMap_heights[v]; ++i) {
+			for (size_t n = 0; n < leftPadding; ++n) {
+				newvec.push_back(RGBA_t{0,0,0,255});
+			}
+			auto start = depthMaps[v].begin() + (i * depthMap_widths[v]);
+			newvec.insert(newvec.end(), start, start + depthMap_widths[v]);
+		}
+	
+		depthMaps[v] = std::move(newvec);
+		depthMap_widths[v] += leftPadding;
+		depthMap_heights[v] += topPadding;
 	}
-
-	depthMap = std::move(newvec);
-	depthMap_width += leftPadding;
-	depthMap_height += topPadding;
 	
 
 	bool presented = false;
@@ -73,19 +127,54 @@ int main() {
 
 		// poll events
 
+		// key buffer, not key states
 		SDL_Event event;
 		while (SDL_PollEvent(&event)) {
 			if (event.type == SDL_EVENT_QUIT) {
 				RUNNING = false;
 			}
+			else if (event.type == SDL_EVENT_KEY_DOWN) {
+				switch (event.key.key) {
+					case SDLK_ESCAPE: 
+						RUNNING = false;
+						break;
+					case SDLK_EQUALS: 
+						OFFSET++;
+						std::cout << "Offset: " << OFFSET << std::endl;
+						break;
+					case SDLK_MINUS: 
+						OFFSET--;
+						if (OFFSET < 0) OFFSET = 0;
+						std::cout << "Offset: " << OFFSET << std::endl;
+						break;
+					
+					case SDLK_LEFT: 
+						if (depthMap_index == 0) depthMap_index = depthMaps.size();
+						depthMap_index--;
+						break;
+					case SDLK_RIGHT: 
+						depthMap_index++;
+						if (depthMap_index == depthMaps.size()) depthMap_index = 0;
+						break;
+					case SDLK_UP: 
+						colorMap_index++;
+						if (colorMap_index == colorMaps.size()) colorMap_index = 0;
+						break;
+					case SDLK_DOWN: 
+						if (colorMap_index == 0) colorMap_index = colorMaps.size();
+						colorMap_index--;
+						break;
+				}
+			}
 		}
+
 
 		// render
 
 		if (!presented) {
-			auto getDepthmapPixel = [depthMap_width, depthMap_height, &depthMap](size_t x, size_t y) {
-				if (x >= depthMap_width || y >= depthMap_height) return RGBA_t{0,0,0,255};
-				return depthMap[y*depthMap_width + x];
+			auto getDepthmapPixel = [depthMap_widths, depthMap_heights, depthMap_index, &depthMaps](size_t x, size_t y) {
+				if (x >= depthMap_widths[depthMap_index] || y >= depthMap_heights[depthMap_index]) return RGBA_t{0,0,0,255};
+				return depthMaps[depthMap_index][y*depthMap_widths[depthMap_index] + x];
 			};
 
 			for (size_t x = 0; x < WIDTH; ++x) {
@@ -100,19 +189,19 @@ int main() {
 					// each pixel val, taken from colormap: 
 					// x < colormap_width?
 					//		 ((x + offset) % colormap_width, y % colormap_height)
-					if (x < colorMap_width) {
-						result[y*WIDTH + x] = colorMap[(y % colorMap_height)*colorMap_width + ((x + offset) % colorMap_width)];
+					if (x < colorMap_widths[colorMap_index]) {
+						result[y*WIDTH + x] = colorMaps[colorMap_index][(y % colorMap_heights[colorMap_index])*colorMap_widths[colorMap_index] + ((x + offset) % colorMap_widths[colorMap_index])];
 					}
 					// else, take from already done image
 					//		 ((x + offset – colormap_width), y)
 					else {
-						result[y*WIDTH + x] = result[y*WIDTH + (x + offset - colorMap_width)];
+						result[y*WIDTH + x] = result[y*WIDTH + (x + offset - colorMap_widths[colorMap_index])];
 					}
 				}
 			}
 
 			renderer.render(result);
-			presented = true;
+			//presented = true;
 		}
 	}
 	

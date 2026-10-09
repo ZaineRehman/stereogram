@@ -66,8 +66,8 @@ public:
 };
 
 
-std::vector<RGBA_t> loadBMP(const char* path, size_t& width, size_t& height) {
-	SDL_Surface* surface = SDL_LoadBMP(path);
+std::vector<RGBA_t> loadBMP(const std::string& path, size_t& width, size_t& height) {
+	SDL_Surface* surface = SDL_LoadBMP(path.c_str());
 
 	if (!surface) return {};
 
