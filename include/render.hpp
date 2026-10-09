@@ -22,7 +22,10 @@ public:
 		size_t width, size_t height, 
 		std::string windowName
 	) : width(width), height(height) {
-		SDL_Init(SDL_INIT_VIDEO);
+		if (!SDL_Init(SDL_INIT_VIDEO)) {
+			std::cerr << "SDL init error: " << SDL_GetError() << std::endl;
+			exit(-1);
+		}
 
 		SDL_CreateWindowAndRenderer(
 			windowName.c_str(), 
@@ -94,10 +97,7 @@ public:
 	}
 };
 
-
-inline std::vector<RGBA_t> loadBMP(const std::string& path, size_t& width, size_t& height) {
-	SDL_Surface* surface = SDL_LoadBMP(path.c_str());
-
+inline std::vector<RGBA_t> loadFile(SDL_Surface* surface, size_t& width, size_t& height) {
 	if (!surface) return {};
 
 	width = static_cast<size_t>(surface->w);
@@ -119,4 +119,13 @@ inline std::vector<RGBA_t> loadBMP(const std::string& path, size_t& width, size_
 	SDL_DestroySurface(converted);
 
 	return pixels;
+}
+
+inline std::vector<RGBA_t> loadBMP(const std::string& path, size_t& width, size_t& height) {
+	SDL_Surface* surface = SDL_LoadBMP(path.c_str());
+	return loadFile(surface, width, height);
+}
+inline std::vector<RGBA_t> loadPNG(const std::string& path, size_t& width, size_t& height) {
+	SDL_Surface* surface = SDL_LoadPNG(path.c_str());
+	return loadFile(surface, width, height);
 }

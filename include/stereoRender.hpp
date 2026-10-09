@@ -7,6 +7,12 @@
 #include "textureHandler.hpp"
 
 
+template<typename T>
+constexpr T max(T n1, T n2) { return n1 > n2 ? n1 : n2; }
+template<typename T>
+constexpr T min(T n1, T n2) { return n1 > n2 ? n2 : n1; }
+
+
 class StereoRender {
 public: 
 	static void render(
